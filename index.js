@@ -20,19 +20,35 @@ var s3Client = new AWS.S3()
 
 
 app.use(function(req,res,next) {
+    if (!req.files.file.length) {
+        req.files.file = [req.files.file];
+    }
 
-    var uu = uuid.v4()
+    var currentIndex = -1;
+    var ids = []
+    var doUpload = function() {
+        currentIndex++
+        var file = req.files.file[currentIndex]
+        var uu = uuid.v4()
 
-    var params = {}
-    params.Bucket = 'filedump'
-    params.Key = uu + '.jpg'
-    params.Body = req.files.file.buffer
-    params.ACL = 'public-read'
-    params.ContentType = 'image/jpeg'
-    params.CacheControl = 'public'
-    s3Client.putObject(params, function(err,result) {
-        res.end(uu)
-    })
+        var params = {}
+        params.Bucket = 'filedump'
+        params.Key = uu + '.jpg'
+        params.Body = file.buffer
+        params.ACL = 'public-read'
+        params.ContentType = 'image/jpeg'
+        params.CacheControl = 'public'
+        s3Client.putObject(params, function(err,result) {
+            ids.push(uu);
+            if (currentIndex == req.files.file.length - 1) {
+                res.end(ids.join(','));
+            } else {
+                doUpload()
+            }
+        })
+    }
+
+    doUpload();
 
 })
 
